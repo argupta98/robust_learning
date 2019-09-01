@@ -22,6 +22,7 @@
 	
 	This document is a sheet to do some derivations /explanations for the Out of Distribution Paper (https://arxiv.org/pdf/1907.04572.pdf).
 	
+	\section{Latent Variable Likelihood}
 	The Out of Distribution Paper uses the likelihood of latent variables in the Neural Rendering Model to assess whether a given sample is in distribution or out of distribution. The neural rendering model re-creates the image by inverting the process the CNN uses to make the prediction. The NRM model uses the same weights and filters ($W^T(l)$) as the CNN transposed to regenerate the image. The latent variables are the relu activations in each layer $s(l)$ and the maximum region of the max pooling $t(l)$. The generation step for NRM is best summarized as:
 	
 	\begin{equation}
@@ -36,9 +37,24 @@
 	Therefore, the process for generating the output at each layer requires that we do deconvolutions with each of the filters on the pixels that were activated. The distribution of the latent variables $z = \{t(l), s(l)\}$ can be seen as based on a structured prior. The paper claims this prior is:
 	
 	\begin{equation}
-		\pi_{x|y} = Softmax \left(\frac{1}{\sigma^2} \sum_{l=1}^{L} \langle b(l), s(l) \odot t(l) \rangle \right)
+		\begin{split}
+		\eta(y, z) &= \sum_{l=1}^{L} \langle b(l, t), s(l) \odot h(l) \rangle \\
+	 	p(y, z) &= \frac{\exp \left(\eta(y, z)\right)\pi_y}
+	 	{\sum_{y_i, z_i}\exp\left(\eta(y_i, z_i)\right)\pi_{y_i}} \\
+	 	\end{split}
 	\end{equation}
 
-	Where $b(l)$ is the bias and also the parameters of the prior distribution, $s(l)$ are the activations, and $t(l)$ are the translations for layer $l$. All three of these are of the dimensions of $h(l)$ on which they are acting. Why is this the prior? I am having trouble understanding why the latent variables $z$ must come from a distribution considering they directly correspond to $s(l), t(l)$ derived from the CNN.
+	Where $b(l)$ is the bias and also the parameters of the prior distribution, $s(l)$ are the activations, and $t(l)$ are the translations for layer $l$. All three of these are of the dimensions of $h(l)$ on which they are acting. Why is this the prior? I am having trouble understanding why the latent variables $z$ must come from a distribution considering they directly correspond to $s(l), t(l)$ derived from the CNN. Does $z$ get sampled all at once? Or is it sampled on each step of the generation?
+	
+	\section{Data Likelihood}
+	The second theorem that they use in the out of distribution paper is used to estimate the probability of the data $x_i$:
+	
+	\begin{equation}
+	\log p (x_i) \leq E_{y_i, z_i}\left[p\left(x_i, (y_i, z_i)\right)\right] \approx -\frac{1}{2\sigma^2}||x_i - h(y_i^*, z_i^*, 0)||^2 + \log \pi_{z_i^*|y_i^*}
+	\end{equation}
+	
+	The first in equality is trivially true. This is effectively just a combination of the Reconstruction loss (first term) and the likelihood of the latent variables (second term)
+	
+	\section{Reconstruction Loss}
 	
 \end{document}
