@@ -36,19 +36,23 @@
 		\begin{equation}
 			x | \{z, y\} = N(h(0), \sigma^2I)
 		\end{equation}
+		\textbf{Why is there noise added?}
 	\end{enumerate}	
 	
 	Therefore, the process for generating the output at each layer requires that we do deconvolutions with each of the filters on the pixels that were activated. The distribution of the latent variables $z = \{t(l), s(l)\}$ can be seen as based on a structured prior. The paper claims this prior is:
 	
 	\begin{equation}
 		\begin{split}
-		\eta(y, z) &= \sum_{l=1}^{L} \langle b(l, t), s(l) \odot h(l) \rangle \\
-	 	p(y, z) &= \frac{\exp \left(\eta(y, z)\right)\pi_y}
-	 	{\sum_{y_i, z_i}\exp\left(\eta(y_i, z_i)\right)\pi_{y_i}} \\
+		\eta(y, z) &= \sum_{l=1}^{L} \langle b(l, t), s(l) \odot h(l) \rangle = \sum_{l=1}^{L} b^T(l)(s(l,p) \odot h(l))\\
+	 	p(z | y) &= \pi_{z|y} = \frac{\exp \left(\eta(y, z)\right)}
+	 	{\sum_{y_i, z_i}\exp\left(\eta(y_i, z_i)\right)} \\
 	 	\end{split}
 	\end{equation}
 
-	Where $b(l)$ are the parameters of the prior distribution, $s(l)$ are the activations, and $t(l)$ are the translations for layer $l$. All three of these are of the dimensions of $h(l)$ on which they are acting. They construct this prior specifically because it is the conjugate prior for the model likelihood. Because it is a conjugate prior, the parameters $b(l)$ in the prior become the biases in the CNN. \textbf{It is important to note that the forward pass of the CNN is step that ``samples" the optimal latent variables $z^*$ from the prior distribution.}
+	Where $b(l)$ are the parameters of the prior distribution, $s(l)$ are the activations, and $t(l)$ are the translations for layer $l$. All three of these are of the dimensions of $h(l)$ on which they are acting. They construct this prior specifically because it is the conjugate prior for the model likelihood. Because it is a conjugate prior, the parameters $b(l)$ in the prior become the biases in the CNN.
+	In words, $s(l) \odot h(l)$ zeros any pixels from the intermediate rendered image $h(l)$ that did not have activations in the CNN. $b(l)$ weights the distribution (?).  The author's reasoning for this form of the prior is that the individual terms $b^T(l)(s(l)\odot h(l))$ mimic the piecewise linear nature of CNN estimation, and that this form allows it to be a conjugate prior to the the posterior distribution $p(y, z | x)$. The other important feature of this prior is that puts a structured dependency on the variable $p(z(l) | z(l + 1), .., z(L))$. \textbf{This dependency is implicit in $h(l)$, since the intermediate rendered template $h(l)$ is based on the the series of latent variables $z(l + 1), ..., z(L)$ that came before. When the previous layers had activations for a particular pixel, the value at $h(l)$ will be higher, and therefore a $z$ that also has that pixel activated will be more likely based on this formulation, thus enforcing the constraint they describe that they expect subsequent activations to be in similar locations in the image.} 
+	
+	\textbf{It is also important to note that the forward pass of the CNN ``samples" the optimal latent variables $z^*$ from the prior distribution. This is what Theorem 3.2 in the NRM paper shows.}
 	
 	\section{Data Likelihood}
 	The second theorem that they use in the out of distribution paper is used to estimate the probability of the data $x_i$:
@@ -57,8 +61,6 @@
 	\log p (x_i) \leq E_{y_i, z_i}\left[p\left(x_i, (y_i, z_i)\right)\right] \approx -\frac{1}{2\sigma^2}||x_i - h(y_i^*, z_i^*, 0)||^2 + \log \pi_{z_i^*|y_i^*}
 	\end{equation}
 	
-	The first in equality is trivially true. This is effectively just a combination of the Reconstruction loss (first term) and the likelihood of the latent variables (second term)
-	
-	\section{Reconstruction Loss}
+	The first in equality is trivially true. The second is more This is effectively just a combination of the Reconstruction loss (first term) and the likelihood of the latent variables (second term)
 	
 \end{document}
