@@ -20,19 +20,23 @@
 \begin{document}
 	\maketitle 
 	
-	This document is a sheet to do some derivations /explanations for the Out of Distribution Paper (https://arxiv.org/pdf/1907.04572.pdf).
+	This document is a sheet to do some derivations /explanations for the Out of Distribution Paper (https://arxiv.org/pdf/1907.04572.pdf). The majority of the explanation for NRM is based on the original paper at (https://arxiv.org/abs/1811.02657).
 	
 	\section{Latent Variable Likelihood}
-	The Out of Distribution Paper uses the likelihood of latent variables in the Neural Rendering Model to assess whether a given sample is in distribution or out of distribution. The neural rendering model re-creates the image by inverting the process the CNN uses to make the prediction. The NRM model uses the same weights and filters ($W^T(l)$) as the CNN transposed to regenerate the image. The latent variables are the relu activations in each layer $s(l)$ and the maximum region of the max pooling $t(l)$. The generation step for NRM is best summarized as:
-	
-	\begin{equation}
-		\begin{split}
-		h(l-1) &= \sum{p \in h(l)} T(t(l, p))B(l)W^T(l)(s(l, p) h(l, p))\\
-		x | z, y &= N(h(0), \sigma^2I)
-		\end{split}
-	\end{equation}
-	
-	Where the first equation is used to successively generate each layer of the NRM encoding from layer $N$ to layer $0$, and the final output $x$ is the \textbf{last layer} ($0$) with gaussian noise added.
+	The Out of Distribution Paper uses the likelihood of latent variables in the Neural Rendering Model to assess whether a given sample is in distribution or out of distribution. The neural rendering model re-creates the image by inverting the process the CNN uses to make the prediction. \textbf{An important realization is that the NRM model is not just the decoder. It is the combination of the CNN at the beginning and the decoder at the end.} The NRM model uses the same weights and filters ($W(l)^T$) as the CNN transposed to regenerate the image. The latent variables are the relu activations in each layer $s(l)$ and the maximum region of the max pooling $t(l)$. The optimal latent variables $z^*(l) = \{s^*(l), t^*(l)\}$ are derived from the forward pass of the CNN used to get the class probabilities. The process for generating an image in NRM is:
+	\begin{enumerate}
+		\item Feed the image $x$ into the CNN, keep track of activations $s^*(l)$ and the locations of max pooling $t^*(l)$. The result is a vector of class probabilities $y$ representing $p(y|x)$.
+		\item Based on $p(y|x)$, we choose a class template $\mu_y$ as our coarsest image $h(L)$.
+		\item Latent variables $z^*(l) = \{s^*(l), t^*(l)\}$ from the CNN step are used at each layer to iteratively refine the base image using the formula:
+		\begin{equation}
+			h(l-1) = \sum_{p \in h(l)} T(t^*(l, p))B(l,p)W^T(l)(s^*(l, p) h(l, p))\\
+		\end{equation}
+		Which uses $s^*(l)$ to select whether a given template is to be rendered or not. $W(l)^T$ is the transposed weight at the corresponding layer of the CNN. $B(l,p)$ pads the template (which is the size of the convolution filter) with zeros to make it the size of the image. $T(t^*l,p)$ is the translation matrix, which translates the rendered template to the area of max pooling if applicable.
+		\item The final rendered image then has noise added to it:
+		\begin{equation}
+			x | \{z, y\} = N(h(0), \sigma^2I)
+		\end{equation}
+	\end{enumerate}	
 	
 	Therefore, the process for generating the output at each layer requires that we do deconvolutions with each of the filters on the pixels that were activated. The distribution of the latent variables $z = \{t(l), s(l)\}$ can be seen as based on a structured prior. The paper claims this prior is:
 	
@@ -44,7 +48,7 @@
 	 	\end{split}
 	\end{equation}
 
-	Where $b(l)$ is the bias and also the parameters of the prior distribution, $s(l)$ are the activations, and $t(l)$ are the translations for layer $l$. All three of these are of the dimensions of $h(l)$ on which they are acting. Why is this the prior? I am having trouble understanding why the latent variables $z$ must come from a distribution considering they directly correspond to $s(l), t(l)$ derived from the CNN. Does $z$ get sampled all at once? Or is it sampled on each step of the generation?
+	Where $b(l)$ are the parameters of the prior distribution, $s(l)$ are the activations, and $t(l)$ are the translations for layer $l$. All three of these are of the dimensions of $h(l)$ on which they are acting. They construct this prior specifically because it is the conjugate prior for the model likelihood. Because it is a conjugate prior, the parameters $b(l)$ in the prior become the biases in the CNN. \textbf{It is important to note that the forward pass of the CNN is step that ``samples" the optimal latent variables $z^*$ from the prior distribution.}
 	
 	\section{Data Likelihood}
 	The second theorem that they use in the out of distribution paper is used to estimate the probability of the data $x_i$:
