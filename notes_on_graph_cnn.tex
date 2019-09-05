@@ -1,0 +1,70 @@
+\documentclass{report}
+\usepackage{seqsplit}
+\usepackage{graphicx}
+\usepackage{cite}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{lipsum}
+\usepackage{mathtools}\usepackage{multirow}
+\usepackage{hhline}
+\usepackage{array}
+\usepackage{lmodern}
+\usepackage{siunitx}
+\usepackage{booktabs}
+\usepackage{etoolbox}
+
+\title{Notes from Human Shape Code}
+\author{Arjun Gupta}
+\begin{document}
+	\maketitle  
+	\section{General Notes on Graph Networks}
+	Many of these notes are from reading this paper (https://arxiv.org/pdf/1812.08434.pdf). Graph NN's can be considered a generalization of CNN's to non-euclidean space. Graph NN's were made to exploit the local substructure of graphs much like CNN's were made to 
+	exploit the local substructure of images. 
+	
+	The paper argues the CNNs and RNNs cannot accurately be used for graphs because they consider an ordering of nodes (pixels in the CNN case), however graphs do not have a particular order and should be order invariant. There are several forms of GNNs, including:
+	
+	\begin{enumerate}
+		\item Graph Convolutional Networks
+		\item Graph Attention Networks
+		\item Graph Spatial-Temporal Networks
+		\item Graph Auto-Encoders
+		\item Graph Generative Networks
+	\end{enumerate}
+
+	
+	\section{Notes on Human Shape Code}
+	The core of their model is defined as \texttt{graph\_cnn} which has three main parts:
+	
+	\begin{enumerate}
+		\item \texttt{gc} - The majority of the graph convolution network.
+		\item \texttt{shape} - The final section of the graph convolution network for getting the SMPL shape.
+		\item \texttt{camera\_fc} - The small model to estimate the camera pose.
+	\end{enumerate}
+
+	\texttt{gc} is the majority of the model as far as the graph convolutions go. The input to \texttt{gc} are the reference vertices of the SMPL mesh concatenated with the output of passing the image through ResNet-50. \texttt{gc} is the ``trunk" network which processes the vertices and the image, and then \texttt{shape} returns the non-parametric down-sampled SMPL Mesh.
+	
+	\texttt{gc} consists of what they define as a \texttt{graph\_linear} block followed by several of what they call \texttt{graph\_residual} blocks. The \texttt{graph\_linear} block is effectively just a matrix multiplication of the feature vectors for each of the graph nodes with a weight matrix and is meant to correspond to a $1 \times 1$ convolution in a CNN. The \texttt{graph\_residual} block is far more complicated. It contains the following in order:
+	
+	\begin{enumerate}
+		\item Group Normalization 
+		\item Graph Linear
+		\item Group Normalization
+		\item Graph Convolution
+		\item Group Normalization
+		\item Graph Linear
+	\end{enumerate} 
+	
+	It then adds the result of passing the input through those layers back to the input to get the final result. The Group Normalizations are all followed by ReLU non-linearities. The authors decide to use Group Normalization rather than the standard Batch normalization because they observed Batch Normalization to achieve poor performance and No-normalization was slow and prone to local minima. The core of the graph residual block is the Graph Convolution layer which is based on the paper here (https://arxiv.org/pdf/1609.02907.pdf). The convolution described by the paper has the following form:
+	
+	\begin{equation}
+	f(X, A) = \sigma\left(\tilde{D}^{-\frac{1}{2}} \tilde{A} \tilde{D}^{-\frac{1}{2}}XW\right)
+	\end{equation}
+	
+	Where $A$ is the adjacency matrix, $\tilde{A} = A + I_N$ (i.e. the graph with self-connections added), $\tilde{D}_{ii} = \sum_{j} A_{i,j}$, and $W$ is the weights matrix. However, based on the code and what is written in the paper, it appears that the convolution really has the following form:
+	
+	\begin{equation}
+	f(X, A) = AXW
+	\end{equation}
+\end{document}
